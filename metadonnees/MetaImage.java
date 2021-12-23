@@ -11,27 +11,27 @@ import com.drew.metadata.Tag;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
+import com.drew.metadata.file.FileSystemDirectory;
 import com.drew.metadata.file.FileTypeDirectory;
 import com.drew.metadata.jfif.JfifDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;
 import com.drew.metadata.png.PngDirectory;
 
 public class MetaImage {
-	private String name;
+	private File f;
 	private Metadata metadata;
 	private ArrayList<Tag> metadataArray;
 	
 	public MetaImage(String path) throws ImageProcessingException, IOException {
-		File f = new File(path);
-		this.name = f.getName();
+		this.f = new File(path);
 		this.metadata = ImageMetadataReader.readMetadata(f);
 		this.metadataArray = new ArrayList<Tag>();
 		
 	}
 	
 	public void extractMetaImage() { 
-		String mime = metadata.getFirstDirectoryOfType(FileTypeDirectory.class).getDescription(FileTypeDirectory.TAG_DETECTED_FILE_MIME_TYPE);
-		if (mime == "image/jpeg") {
+		String mime = imageFormat();
+		if (mime.equals("jpeg")) {
 			ExifIFD0Directory exifDir1 = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
 			ExifSubIFDDirectory exifDir2 = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
 			JpegDirectory jpegDir = metadata.getFirstDirectoryOfType(JpegDirectory.class);
@@ -64,16 +64,42 @@ public class MetaImage {
 				}
 			}
 		}
-		if (mime == "image/png") {
+		if (mime.equals("png")) {
 			PngDirectory pngDir = metadata.getFirstDirectoryOfType(PngDirectory.class);
+			FileSystemDirectory fileSysDir = metadata.getFirstDirectoryOfType(FileSystemDirectory.class);
+			
 			for (Tag tag : pngDir.getTags()) {
+				metadataArray.add(tag);
+			}
+			
+			for (Tag tag : fileSysDir.getTags()) {
 				metadataArray.add(tag);
 			}
 		}
 	}
+	
+	public String imageFormat() {
+		String format = "";
+		String mime = metadata.getFirstDirectoryOfType(FileTypeDirectory.class).getDescription(FileTypeDirectory.TAG_DETECTED_FILE_MIME_TYPE);
+		if (mime.equals("image/jpeg")) {
+			format = "jpeg";
+		}
+		if (mime.equals("image/png")) {
+			format = "png";
+		}
+		return format;
+	}
+	
+	public ArrayList<Tag> getMetadataArray() {
+		return metadataArray;
+	}
+
+	public File getF() {
+		return f;
+	}
 
 	public String toString() {
-		String result = "Les metadonnees de " + name + ":\n";
+		String result = "Les metadonnees de " + f.getName() + ":\n";
 		for (int i=0 ; i<metadataArray.size(); i++) {
 			result += metadataArray.get(i).getTagName() + " - " + metadataArray.get(i).getDescription() + "\n";
 		}
